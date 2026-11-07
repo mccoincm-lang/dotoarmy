@@ -1,0 +1,12 @@
+{
+  "name": "dotoarmy",
+  "private": true,
+  "version": "1.0.22",
+  "description": "DOTO Army: economic-war arcade game for DotOne fans (web + Android WebView build)",
+  "scripts": { "build:www": "node scripts/build-www.mjs" },
+  "dependencies": {
+    "three": "0.128.0",
+    "@fontsource/vazirmatn": "^5.0.0",
+    "@fontsource/chakra-petch": "^5.0.0"
+  }
+}

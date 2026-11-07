@@ -1,0 +1,72 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 1.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bundle game for offline use (three.js + fonts)
+        run: |
+          npm install --no-audit --no-fund
+          node scripts/build-www.mjs
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Signing key
+        env:
+          KS_B64: ${{ secrets.DOTO_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/doto.jks"
+            echo "DOTO_KEYSTORE=$RUNNER_TEMP/doto.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK
+        env:
+          DOTO_KEYSTORE_PASSWORD: ${{ secrets.DOTO_KEYSTORE_PASSWORD }}
+          DOTO_KEY_ALIAS: dotoarmy
+        run: |
+          if [ -n "$DOTO_KEYSTORE" ]; then
+            gradle -p android assembleRelease --no-daemon
+            cp android/app/build/outputs/apk/release/app-release.apk "DotoArmy-$VERSION_NAME.apk"
+          else
+            gradle -p android assembleDebug --no-daemon
+            cp android/app/build/outputs/apk/debug/app-debug.apk "DotoArmy-$VERSION_NAME-debug.apk"
+          fi
+          ls -la *.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DotoArmy-apk
+          path: DotoArmy-*.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION_NAME }}
+          name: DOTO Army ${{ env.VERSION_NAME }}
+          body: Android build of DOTO Army (offline, bundled three.js and fonts).
+          files: DotoArmy-*.apk

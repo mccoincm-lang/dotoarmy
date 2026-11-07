@@ -1,0 +1,52 @@
+plugins { id 'com.android.application' }
+
+def ksFile = System.getenv('DOTO_KEYSTORE') ? file(System.getenv('DOTO_KEYSTORE')) : null
+
+android {
+    namespace 'com.dotone.dotoarmy'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.dotone.dotoarmy'
+        minSdk 24
+        targetSdk 34
+        versionCode Integer.parseInt(System.getenv('VERSION_CODE') ?: '22')
+        versionName System.getenv('VERSION_NAME') ?: '1.0.22'
+    }
+
+    signingConfigs {
+        debug {
+            // fixed, public debug key so test builds install over each other
+            storeFile rootProject.file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        if (ksFile != null && ksFile.exists()) {
+            release {
+                storeFile ksFile
+                storePassword System.getenv('DOTO_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('DOTO_KEY_ALIAS') ?: 'dotoarmy'
+                keyPassword System.getenv('DOTO_KEY_PASSWORD') ?: System.getenv('DOTO_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (ksFile != null && ksFile.exists()) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    androidResources { noCompress += ['html', 'js', 'css', 'woff2', 'woff'] }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}
